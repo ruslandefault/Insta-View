@@ -12,10 +12,10 @@ from app.bot import keyboards, texts
 from app.bot.states import AddChannel
 from app.db.base import session_scope
 from app.db.models import Channel, Subscription
-from app.instagram import manager
+from app.instagram import shared
 from app.instagram.base import FetchError, IgUserInfo
 from app.services.links import parse_ig_link
-from app.services.users import current_account, get_user_by_tg
+from app.services.users import get_user_by_tg
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -23,12 +23,6 @@ router = Router()
 
 @router.message(F.text == keyboards.BTN_ADD)
 async def add_channel_start(message: Message, state: FSMContext) -> None:
-    async with session_scope() as session:
-        user = await get_user_by_tg(session, message.from_user.id)
-        account = await current_account(session, user.id) if user else None
-    if account is None:
-        await message.answer(texts.NEED_IG_FIRST)
-        return
     await state.set_state(AddChannel.waiting_link)
     await message.answer(texts.ADD_CHANNEL_ASK, parse_mode="HTML")
 
@@ -40,17 +34,17 @@ async def add_channel_link(message: Message, state: FSMContext) -> None:
         await message.answer(texts.CHANNEL_PARSE_FAIL)
         return
 
+    fetcher = await shared.get_shared()
+    if fetcher is None:
+        await state.clear()
+        await message.answer(texts.SERVICE_UNAVAILABLE)
+        return
+
     async with session_scope() as session:
         user = await get_user_by_tg(session, message.from_user.id)
-        account = await current_account(session, user.id) if user else None
-        if account is None:
+        if user is None:
             await state.clear()
-            await message.answer(texts.NEED_IG_FIRST)
-            return
-
-        fetcher = await manager.get_active_fetcher(account)
-        if fetcher is None:
-            await message.answer("❌ Instagram sessiyasi yaroqsiz. ⚙️ Sozlamalardan qayta ulang.")
+            await message.answer("❗ Avval /start bosing.")
             return
 
         await message.answer("🔎 Tekshirilmoqda...")

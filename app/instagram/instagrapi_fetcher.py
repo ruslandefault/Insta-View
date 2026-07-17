@@ -156,6 +156,17 @@ class InstagrapiFetcher:
         # challenge yakunlandi — sessiya o'rnatilgan bo'lishi kerak
         return LoginOutcome(LoginResult.ok, session_json=self._dump_session())
 
+    async def login_by_sessionid(self, sessionid: str) -> bool:
+        """Brauzer sessionid orqali kirish — login challenge/467 bo'lmaydi."""
+        try:
+            await asyncio.to_thread(self.client.login_by_sessionid, sessionid)
+        except Exception as exc:  # noqa: BLE001
+            if self._is_authenticated():
+                return True
+            logger.warning("sessionid login xatosi: %s", type(exc).__name__)
+            return False
+        return True
+
     async def resume(self, session_json: str) -> bool:
         try:
             settings_dict = json.loads(session_json)

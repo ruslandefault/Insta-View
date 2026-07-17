@@ -1,4 +1,6 @@
-"""Ro'yxatdan o'tish: /start + kontakt (prompt 3.1)."""
+"""Ro'yxatdan o'tish: /start + kontakt (prompt 3.1).
+
+Instagram akkaunt so'ralmaydi — fetch markaziy (shared) akkaunt orqali."""
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -7,12 +9,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from app.bot import keyboards, texts
-from app.bot.handlers.ig_account import start_ig_add
 from app.bot.states import Registration
 from app.config import settings
 from app.db.base import session_scope
 from app.db.models import User
-from app.services.users import current_account, ensure_settings, get_user_by_tg
+from app.services.users import ensure_settings, get_user_by_tg
 
 router = Router()
 
@@ -22,14 +23,9 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
     async with session_scope() as session:
         user = await get_user_by_tg(session, message.from_user.id)
-        if user is not None:
-            account = await current_account(session, user.id)
-            has_account = account is not None
 
     if user is not None:
         await message.answer("🏠 Asosiy menyu", reply_markup=keyboards.main_menu())
-        if not has_account:
-            await start_ig_add(message, state)
         return
 
     await state.set_state(Registration.waiting_contact)
@@ -58,8 +54,7 @@ async def got_contact(message: Message, state: FSMContext) -> None:
 
     await state.clear()
     await message.answer(texts.REGISTERED, reply_markup=keyboards.main_menu())
-    # darhol Instagram akkaunt qo'shishga o'tamiz (prompt 3.1)
-    await start_ig_add(message, state)
+    await message.answer(texts.START_HINT, parse_mode="HTML")
 
 
 @router.message(Registration.waiting_contact)

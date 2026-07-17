@@ -8,7 +8,7 @@ from aiogram import F, Router
 from aiogram.types import Message
 
 from app.bot import keyboards, texts
-from app.bot.notify import notify_account_issue
+from app.bot.notify import notify_admin_issue
 from app.config import settings
 from app.db.base import session_scope
 from app.services.delivery import deliver
@@ -39,7 +39,7 @@ async def manual_refresh(message: Message) -> None:
     async with session_scope() as session:
         user = await get_user_by_tg(session, tg_id)
         if user is None:
-            await message.answer(texts.NEED_IG_FIRST)
+            await message.answer("❗ Avval /start bosing.")
             return
         user_id, tz = user.id, user.tz
 
@@ -48,15 +48,17 @@ async def manual_refresh(message: Message) -> None:
 
     result = await poll_user(user_id)
     if result.no_account:
-        await message.answer(texts.NEED_IG_FIRST)
+        await message.answer(texts.SERVICE_UNAVAILABLE)
         return
 
     count = await deliver(message.bot, user_id, tg_id, tz, result.pending)
 
     if result.error is not None:
-        await notify_account_issue(message.bot, tg_id, result)
+        await notify_admin_issue(message.bot, result)
 
     if count:
         await message.answer(texts.REFRESH_DONE.format(count=count))
-    elif result.error is None:
+    elif result.error is not None:
+        await message.answer(texts.REFRESH_TEMPORARY_FAIL)
+    else:
         await message.answer(texts.REFRESH_NOTHING)

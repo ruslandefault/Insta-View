@@ -49,12 +49,6 @@ def channels_kb(channels: list[tuple[int, str]]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def add_account_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="🔐 Yangi akkaunt qo'shish", callback_data="ig_add")]]
-    )
-
-
 def settings_kb(polls: int, reels: bool, stories: bool, posts: bool) -> InlineKeyboardMarkup:
     def mark(on: bool) -> str:
         return "✅" if on else "☐"
@@ -70,6 +64,5 @@ def settings_kb(polls: int, reels: bool, stories: bool, posts: bool) -> InlineKe
             [InlineKeyboardButton(text=f"{mark(reels)} Reels", callback_data="toggle:reels")],
             [InlineKeyboardButton(text=f"{mark(stories)} Stories", callback_data="toggle:stories")],
             [InlineKeyboardButton(text=f"{mark(posts)} Posts", callback_data="toggle:posts")],
-            [InlineKeyboardButton(text="🔐 Instagram akkauntni almashtirish", callback_data="ig_add")],
         ]
     )

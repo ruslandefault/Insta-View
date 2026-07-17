@@ -12,12 +12,12 @@ from datetime import datetime, timedelta, timezone
 
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import and_, select, update
+from sqlalchemy import select, update
 
-from app.bot.notify import notify_account_issue
+from app.bot.notify import notify_admin_issue
 from app.config import settings
 from app.db.base import session_scope
-from app.db.models import AccountStatus, IgAccount, User, UserSettings
+from app.db.models import User, UserSettings
 from app.services.delivery import deliver
 from app.services.fetch_service import poll_user
 
@@ -42,14 +42,6 @@ async def _collect_due() -> list[DueUser]:
                     UserSettings.polls_per_day, UserSettings.last_poll_at,
                 )
                 .join(UserSettings, UserSettings.user_id == User.id)
-                .join(
-                    IgAccount,
-                    and_(
-                        IgAccount.user_id == User.id,
-                        IgAccount.is_current.is_(True),
-                        IgAccount.status == AccountStatus.active,
-                    ),
-                )
             )
         ).all()
 
@@ -80,7 +72,7 @@ async def tick(bot: Bot) -> None:
             result = await poll_user(du.user_id)
             await deliver(bot, du.user_id, du.telegram_id, du.tz, result.pending)
             if result.error is not None:
-                await notify_account_issue(bot, du.telegram_id, result)
+                await notify_admin_issue(bot, result)
         except Exception:  # noqa: BLE001
             logger.exception("scheduler: user %s uchun xato", du.user_id)
         finally:

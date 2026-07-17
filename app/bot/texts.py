@@ -11,6 +11,15 @@ CONTACT_ONLY_OWN = "❗ Iltimos, faqat o'zingizning kontaktingizni yuboring."
 
 REGISTERED = "✅ Ro'yxatdan o'tdingiz!"
 
+START_HINT = (
+    "➕ <b>Kanal qo'shish</b> tugmasi orqali kuzatmoqchi bo'lgan Instagram "
+    "kanallaringizni qo'shing. Bot ularning yangi Reels/Stories/Postlarini shu yerga yetkazib beradi."
+)
+
+# Markaziy akkaunt yaroqsiz/sozlanmagan bo'lsa
+SERVICE_UNAVAILABLE = "⚠️ Xizmat hozircha vaqtincha mavjud emas. Birozdan so'ng urinib ko'ring."
+REFRESH_TEMPORARY_FAIL = "⏳ Hozir Instagram cheklovi tufayli yangilab bo'lmadi. Birozdan so'ng qayta urining."
+
 # --- Instagram akkaunt ---
 IG_WARNING = (
     "🔐 <b>Instagram akkaunt qo'shish</b>\n\n"

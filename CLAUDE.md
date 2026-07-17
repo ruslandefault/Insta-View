@@ -2,8 +2,15 @@
 
 ## Loyiha haqida
 Telegram bot: foydalanuvchi kuzatgan Instagram kanallarining yangi kontentini
-(Reels/Stories/Post) uning **o'z IG akkaunti** orqali olib kelib Telegram'da yetkazadi.
+(Reels/Stories/Post) olib kelib Telegram'da yetkazadi.
 To'liq texnik topshiriq: `instagram_bot_prompt.md`.
+
+> ⚠️ ARXITEKTURA O'ZGARDI: dastlab prompt "har foydalanuvchi o'z IG akkauntini
+> kiritadi" degan edi. Amalda Instagram programmatik login'ni throttle/challenge
+> qildi va UX og'ir bo'ldi. Endi **bitta markaziy (shared) IG akkaunt** ishlatiladi
+> (`app/instagram/shared.py`, `.env` dagi IG_USERNAME/IG_PASSWORD yoki IG_SESSIONID).
+> Foydalanuvchilar faqat telefon bilan ro'yxatdan o'tadi va kanal qo'shadi.
+> `ig_accounts` jadvali qoldi (backward-compat), lekin ishlatilmaydi.
 
 ## Texnologiyalar
 - Python 3.12, **aiogram 3.x** (async), **instagrapi** (private API, per-user)
@@ -23,7 +30,8 @@ python -m app.main               # lokal (venv + ffmpeg + DB kerak)
 - Barcha instagrapi (sinxron) chaqiruvlari `asyncio.to_thread` orqali — event loop bloklanmasin.
 - IG bilan ishlash faqat `InstagramFetcher` protokoli (`app/instagram/base.py`) orqali —
   implementatsiyani almashtirish mumkin bo'lsin (SOLID).
-- Har foydalanuvchi akkaunti uchun ALOHIDA sessiya (`app/instagram/manager.py` keshlaydi).
+- Markaziy sessiya `shared_session.json` ga saqlanadi — restartda qayta login yo'q
+  (`app/instagram/shared.py`). Bu throttle sababini (takroriy login) yo'qotadi.
 - DB migratsiyasi yo'q — `init_db()` `create_all` qiladi (20 foydalanuvchi uchun yetarli).
 - Yetkazish idempotent: `deliveries(user_id, content_item_id)` UNIQUE.
 - Kontent dedup: `content_items(channel_id, ig_media_id)` UNIQUE.

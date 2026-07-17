@@ -22,7 +22,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.base import session_scope
 from app.db.models import Delivery
-from app.instagram import manager
+from app.instagram import shared
 from app.instagram.base import FetchedMedia
 from app.services.video import ensure_under_limit
 
@@ -74,7 +74,7 @@ async def deliver(bot: Bot, user_id: int, telegram_id: int, tz: str, pending: li
     if not pending:
         return 0
 
-    fetcher = manager.get_cached(user_id)
+    fetcher = await shared.get_shared()
     # eng eski birinchi
     pending.sort(key=lambda p: p.media.posted_at or datetime.min.replace(tzinfo=ZoneInfo("UTC")))
 

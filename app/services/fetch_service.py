@@ -1,6 +1,8 @@
-"""Fetch orkestratsiyasi: foydalanuvchi akkaunti orqali kanallardan
+"""Fetch orkestratsiyasi: SHARED Instagram akkaunt orqali kanallardan
 yangi kontentni olib kelish, DB'ga dedup bilan yozish va yetkazilmagan
-elementlar ro'yxatini qaytarish (prompt 3.6, 3.9, 5, 7)."""
+elementlar ro'yxatini qaytarish (prompt 3.6, 3.9, 5, 7).
+
+Foydalanuvchilar akkaunt kiritmaydi — barcha fetch markaziy akkaunt orqali."""
 from __future__ import annotations
 
 import logging
@@ -10,16 +12,14 @@ from sqlalchemy import select
 
 from app.db.base import session_scope
 from app.db.models import (
-    AccountStatus,
     Channel,
     ContentItem,
     Delivery,
-    IgAccount,
     MediaType,
     Subscription,
     UserSettings,
 )
-from app.instagram import manager
+from app.instagram import shared
 from app.instagram.base import FetchedMedia, FetchError, FetchErrorKind
 from app.instagram.instagrapi_fetcher import InstagrapiFetcher
 
@@ -38,33 +38,17 @@ class Pending:
 class PollResult:
     pending: list[Pending] = field(default_factory=list)
     error: FetchError | None = None
-    account_username: str | None = None
-    no_account: bool = False
-
-
-def _account_status_for(kind: FetchErrorKind) -> AccountStatus | None:
-    if kind is FetchErrorKind.challenge:
-        return AccountStatus.challenge_required
-    if kind in (FetchErrorKind.feedback, FetchErrorKind.forbidden, FetchErrorKind.login_required):
-        return AccountStatus.banned
-    return None  # rate_limit va boshqalar — vaqtinchalik, statusni o'zgartirmaymiz
+    no_account: bool = False  # shared akkaunt sozlanmagan/yaroqsiz
 
 
 async def poll_user(user_id: int) -> PollResult:
-    """Bitta foydalanuvchi uchun to'liq fetch cycle."""
+    """Bitta foydalanuvchi uchun to'liq fetch cycle (shared akkaunt orqali)."""
+    fetcher = await shared.get_shared()
+    if fetcher is None:
+        return PollResult(no_account=True,
+                          error=FetchError(FetchErrorKind.login_required, "Shared IG akkaunt yaroqsiz"))
+
     async with session_scope() as session:
-        account = (
-            await session.execute(
-                select(IgAccount).where(
-                    IgAccount.user_id == user_id, IgAccount.is_current.is_(True)
-                )
-            )
-        ).scalar_one_or_none()
-
-        if account is None or account.status is not AccountStatus.active:
-            return PollResult(no_account=account is None,
-                              account_username=account.ig_username if account else None)
-
         us = (
             await session.execute(select(UserSettings).where(UserSettings.user_id == user_id))
         ).scalar_one_or_none()
@@ -82,29 +66,21 @@ async def poll_user(user_id: int) -> PollResult:
         ).scalars().all()
 
         if not channels:
-            return PollResult(account_username=account.ig_username)
-
-        fetcher = await manager.get_active_fetcher(account)
-        if fetcher is None:
-            account.status = AccountStatus.invalid
-            account.last_error = "sessiya tiklab bo'lmadi"
-            return PollResult(error=FetchError(FetchErrorKind.login_required),
-                              account_username=account.ig_username)
+            return PollResult()
 
         pending: list[Pending] = []
         try:
             for channel in channels:
                 await _poll_channel(session, fetcher, channel, us, pending, user_id)
         except FetchError as exc:
-            new_status = _account_status_for(exc.kind)
-            if new_status is not None:
-                account.status = new_status
-                account.last_error = exc.message
-                manager.drop_active(user_id)
-            logger.warning("fetch to'xtadi (@%s): %s", account.ig_username, exc.kind.value)
-            return PollResult(pending=pending, error=exc, account_username=account.ig_username)
+            if exc.kind in (FetchErrorKind.challenge, FetchErrorKind.feedback,
+                            FetchErrorKind.forbidden, FetchErrorKind.login_required):
+                # shared sessiya yaroqsiz — keyingi urinishda qayta login
+                shared.reset()
+            logger.warning("fetch to'xtadi: %s", exc.kind.value)
+            return PollResult(pending=pending, error=exc)
 
-        return PollResult(pending=pending, account_username=account.ig_username)
+        return PollResult(pending=pending)
 
 
 async def _poll_channel(
@@ -135,7 +111,6 @@ async def _poll_channel(
 
     for media in collected:
         item = await _get_or_create_item(session, channel.id, media)
-        # allaqachon yetkazilganmi?
         already = (
             await session.execute(
                 select(Delivery.id).where(
@@ -172,5 +147,5 @@ async def _get_or_create_item(session, channel_id: int, media: FetchedMedia) -> 
         thumbnail_url=media.thumbnail_url,
     )
     session.add(item)
-    await session.flush()  # id kerak
+    await session.flush()
     return item

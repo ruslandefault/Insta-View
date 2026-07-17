@@ -1,4 +1,6 @@
-"""Sozlamalar: kunlik so'rovlar, kontent turlari, akkaunt (prompt 3.7)."""
+"""Sozlamalar: kunlik so'rovlar, kontent turlari (prompt 3.7).
+
+Instagram akkaunt bo'limi yo'q — fetch markaziy akkaunt orqali."""
 from __future__ import annotations
 
 from aiogram import F, Router
@@ -7,13 +9,9 @@ from aiogram.types import CallbackQuery, Message
 from app.bot import keyboards, texts
 from app.config import settings as app_settings
 from app.db.base import session_scope
-from app.services.users import current_account, ensure_settings, get_user_by_tg, account_status_label
+from app.services.users import ensure_settings, get_user_by_tg
 
 router = Router()
-
-
-def _settings_text(status_label: str) -> str:
-    return f"{texts.SETTINGS_HEADER}\n\n📱 Instagram akkaunt: {status_label}"
 
 
 @router.message(F.text == keyboards.BTN_SETTINGS)
@@ -21,14 +19,12 @@ async def open_settings(message: Message) -> None:
     async with session_scope() as session:
         user = await get_user_by_tg(session, message.from_user.id)
         if user is None:
-            await message.answer(texts.NEED_IG_FIRST)
+            await message.answer("❗ Avval /start bosing.")
             return
         us = await ensure_settings(session, user.id)
-        account = await current_account(session, user.id)
-        label = account_status_label(account)
         kb = keyboards.settings_kb(us.polls_per_day, us.fetch_reels, us.fetch_stories, us.fetch_posts)
 
-    await message.answer(_settings_text(label), parse_mode="HTML", reply_markup=kb)
+    await message.answer(texts.SETTINGS_HEADER, parse_mode="HTML", reply_markup=kb)
 
 
 @router.callback_query(F.data == "noop")
@@ -65,11 +61,9 @@ async def _update_and_refresh(cb: CallbackQuery, polls: int | None = None, toggl
             us.fetch_stories = not us.fetch_stories
         elif toggle_field == "posts":
             us.fetch_posts = not us.fetch_posts
-        account = await current_account(session, user.id)
-        label = account_status_label(account)
         kb = keyboards.settings_kb(us.polls_per_day, us.fetch_reels, us.fetch_stories, us.fetch_posts)
 
     try:
-        await cb.message.edit_text(_settings_text(label), parse_mode="HTML", reply_markup=kb)
+        await cb.message.edit_text(texts.SETTINGS_HEADER, parse_mode="HTML", reply_markup=kb)
     except Exception:  # noqa: BLE001
         pass
