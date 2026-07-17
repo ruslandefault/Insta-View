@@ -1,0 +1,30 @@
+# === Python / FastAPI ===
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# === Maxfiy ma'lumotlar ===
+.env
+*.env
+!.env.example
+
+# === Node / React ===
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# === IDE / OS ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# === Loglar ===
+*.log
+npm-debug.log*
