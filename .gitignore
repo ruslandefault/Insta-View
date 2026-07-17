@@ -25,6 +25,8 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 
-# === Loglar ===
+# === Loglar / lokal DB ===
 *.log
 npm-debug.log*
+*.db
+*.sqlite3
