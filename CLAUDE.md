@@ -1,42 +1,40 @@
 # Insta View — Claude Code yo'riqnomasi
 
 ## Loyiha haqida
-Fullstack ilova: **FastAPI** backend + **React (Vite)** frontend.
+Telegram bot: foydalanuvchi kuzatgan Instagram kanallarining yangi kontentini
+(Reels/Stories/Post) uning **o'z IG akkaunti** orqali olib kelib Telegram'da yetkazadi.
+To'liq texnik topshiriq: `instagram_bot_prompt.md`.
 
 ## Texnologiyalar
-- **Backend:** Python 3.11+, FastAPI, Uvicorn, Pydantic v2, pydantic-settings
-- **Frontend:** React 18, Vite 6
-- **OS:** Windows (PowerShell)
-
-## Loyiha tuzilishi
-- `backend/app/main.py` — FastAPI ilovasi va endpointlar
-- `backend/app/config.py` — sozlamalar (`.env` orqali)
-- `backend/requirements.txt` — Python paketlari
-- `frontend/src/` — React komponentlari
-- `frontend/vite.config.js` — Vite + `/api` proxy → `localhost:8000`
+- Python 3.12, **aiogram 3.x** (async), **instagrapi** (private API, per-user)
+- **PostgreSQL 16** + SQLAlchemy 2.0 async (asyncpg)
+- APScheduler (AsyncIOScheduler), ffmpeg (video siqish)
+- cryptography (Fernet) — parol/session shifrlash
+- Docker + docker-compose
 
 ## Buyruqlar
-
-### Backend
 ```bash
-cd backend
-.venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload
+docker compose up --build -d     # ishga tushirish
+docker compose logs -f bot       # loglar
+python -m app.main               # lokal (venv + ffmpeg + DB kerak)
 ```
 
-### Frontend
-```bash
-cd frontend
-npm run dev
-```
+## Arxitektura qoidalari
+- Barcha instagrapi (sinxron) chaqiruvlari `asyncio.to_thread` orqali — event loop bloklanmasin.
+- IG bilan ishlash faqat `InstagramFetcher` protokoli (`app/instagram/base.py`) orqali —
+  implementatsiyani almashtirish mumkin bo'lsin (SOLID).
+- Har foydalanuvchi akkaunti uchun ALOHIDA sessiya (`app/instagram/manager.py` keshlaydi).
+- DB migratsiyasi yo'q — `init_db()` `create_all` qiladi (20 foydalanuvchi uchun yetarli).
+- Yetkazish idempotent: `deliveries(user_id, content_item_id)` UNIQUE.
+- Kontent dedup: `content_items(channel_id, ig_media_id)` UNIQUE.
 
-## Qoidalar / konvensiyalar
-- Backend port: **8000**, Frontend port: **5173**
-- Frontend backendga faqat `/api/...` prefiksi orqali murojaat qiladi (Vite proxy).
-- Yangi API endpointlar `/api/...` ostida bo'lsin.
-- Maxfiy qiymatlar faqat `.env` da (git'ga tushmaydi). `.env.example` ni yangilab turing.
-- Kod izohlari va commit xabarlari o'zbek tilida bo'lishi mumkin.
+## Xavfsizlik (MUHIM)
+- Parol/session bazaga faqat **shifrlangan** (Fernet) yoziladi.
+- Parolli Telegram xabari qabul qilingach **darhol o'chiriladi** (`message.delete()`).
+- Credential HECH QACHON log qilinmaydi.
+- `.env` ni commit qilmang. `FERNET_KEY` va `BOT_TOKEN` majburiy.
 
-## Muhim
-- `.env` faylini HECH QACHON commit qilmang.
-- Python kodda Pydantic v2 sintaksisidan foydalaning (v1 emas).
+## Uslub
+- Foydalanuvchiga chiqadigan barcha matnlar o'zbek tilida (`app/bot/texts.py`).
+- Kod izohlari o'zbekcha bo'lishi mumkin. Prompt bo'lim raqamlariga havola qiling (masalan "prompt 3.8").
+- instagrapi xatolari `app/instagram/base.py`dagi `FetchError`/`FetchErrorKind` ga map qilinadi.

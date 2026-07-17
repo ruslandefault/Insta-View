@@ -2,22 +2,21 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
-      "Bash(python -m venv:*)",
+      "Bash(python -m:*)",
       "Bash(pip install:*)",
-      "Bash(uvicorn:*)",
       "Bash(pytest:*)",
-      "Bash(npm install)",
-      "Bash(npm run:*)",
-      "Bash(npx:*)",
+      "Bash(ruff:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git status)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Read(//C/Users/RUSLAN/Desktop/Projects/insta-view/**)"
+      "Bash(git push:*)"
     ],
     "deny": [
-      "Read(./backend/.env)",
+      "Read(./.env)",
       "Read(./**/.env)"
     ]
   }

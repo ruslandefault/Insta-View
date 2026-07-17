@@ -1,0 +1,11 @@
+aiogram==3.15.0
+instagrapi==2.1.2
+SQLAlchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+APScheduler==3.11.0
+cryptography==44.0.0
+# instagrapi 2.1.2 pydantic==2.7.1 ni aniq talab qiladi
+pydantic==2.7.1
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+Pillow==11.0.0
